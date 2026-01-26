@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: field_service_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin_skripsi
+      POSTGRES_PASSWORD: secure_password_123
+      POSTGRES_DB: field_service_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
