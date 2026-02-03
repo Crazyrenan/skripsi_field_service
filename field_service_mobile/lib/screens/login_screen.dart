@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'dashboard_screen.dart'; // Pastikan file ini sudah dibuat sesuai panduan sebelumnya
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -9,45 +10,67 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Controller untuk menangkap input teks
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  
+  // Service untuk komunikasi ke API
   final ApiService _apiService = ApiService();
   
+  // State untuk Loading dan Password Visibility
   bool _isLoading = false;
-  bool _isPasswordVisible = false; // Tambahan UX: Show/Hide Password
+  bool _isPasswordVisible = false;
 
-  // Warna Brand (Bisa dipindah ke theme config nantinya)
+  // Konfigurasi Warna
   final Color _primaryColor = const Color(0xFF1E3C72); 
   final Color _accentColor = const Color(0xFF2A5298);
 
+  // --- FUNGSI LOGIN UTAMA (SUDAH DIPERBAIKI) ---
   void _handleLogin() async {
-    // Validasi sederhana sebelum kirim request
+    // 1. Validasi Input Kosong
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showCustomSnackBar('Email dan Password wajib diisi', isError: true);
       return;
     }
 
+    // 2. Tampilkan Loading
     setState(() => _isLoading = true);
     
-    // Simulasi delay agar loading terlihat (Hapus jika production)
-    // await Future.delayed(const Duration(seconds: 2)); 
-
+    // 3. Panggil API Login (Tunggu sampai selesai)
     final result = await _apiService.login(
       _emailController.text,
       _passwordController.text,
     );
 
+    // Cek apakah layar masih aktif sebelum update UI (Mencegah error async)
     if (!mounted) return;
+
+    // 4. Matikan Loading
     setState(() => _isLoading = false);
 
+    // 5. Cek Hasil Login
     if (result['success']) {
+      // A. JIKA SUKSES
       _showCustomSnackBar(result['message'], isError: false);
-      // Navigasi ke halaman berikutnya bisa ditaruh di sini
+      
+      // Beri jeda 1 detik agar user membaca pesan sukses
+      await Future.delayed(const Duration(seconds: 1)); 
+
+      if (!mounted) return;
+      
+      // Pindah ke Dashboard & Hapus halaman Login dari stack (agar tidak bisa back)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+      );
+      
     } else {
+      // B. JIKA GAGAL
       _showCustomSnackBar(result['message'], isError: true);
     }
   }
 
+  // Helper untuk menampilkan SnackBar kustom
   void _showCustomSnackBar(String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -68,11 +91,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Mengambil ukuran layar
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Background lebih bersih
+      backgroundColor: Colors.grey[50],
       body: SingleChildScrollView(
         child: SizedBox(
           height: size.height,
@@ -100,17 +122,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     children: [
                       SizedBox(height: size.height * 0.05),
-                      // Logo / Branding Area
+                      
+                      // Bagian Logo & Judul
                       _buildBrandHeader(),
                       
                       const Spacer(flex: 2),
                       
-                      // Login Card Form
+                      // Bagian Form Input
                       _buildLoginForm(),
                       
                       const Spacer(flex: 3),
                       
-                      // Footer Version
+                      // Footer
                       Text(
                         'Version 1.0.0 • Field Service Pro',
                         style: TextStyle(color: Colors.grey[400], fontSize: 12),
@@ -192,7 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 32),
 
-          // Email Input
+          // Input Email
           _buildTextField(
             controller: _emailController,
             label: 'Email Address',
@@ -202,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
           
           const SizedBox(height: 20),
           
-          // Password Input
+          // Input Password
           _buildTextField(
             controller: _passwordController,
             label: 'Password',
@@ -212,7 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
           const SizedBox(height: 32),
 
-          // Login Button
+          // Tombol Login
           SizedBox(
             height: 56,
             child: ElevatedButton(
@@ -242,7 +265,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Reusable Text Field Widget agar kode lebih bersih
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -288,14 +310,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// Class khusus untuk membuat lekukan (curve) pada background
+// Clipper untuk membuat lengkungan di header
 class HeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     var path = Path();
     path.lineTo(0, size.height - 50);
     
-    // Membuat kurva quadratic bezier
     var firstControlPoint = Offset(size.width / 4, size.height);
     var firstEndPoint = Offset(size.width / 2.25, size.height - 30);
     path.quadraticBezierTo(
