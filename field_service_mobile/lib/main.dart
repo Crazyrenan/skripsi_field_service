@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; // <-- Sekarang ini sudah tidak akan error
-
-import 'screens/welcome_screen.dart'; 
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart'; // <--- Wajib Import ini
+import 'providers/auth_provider.dart';   // <--- Wajib Import ini
+import 'screens/welcome_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    // BUNGKUS MyApp DENGAN MULTIPROVIDER
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -17,17 +26,12 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        
-        // Agar font satu aplikasi berubah jadi modern (Poppins)
-        textTheme: GoogleFonts.poppinsTextTheme(), 
-        
+        textTheme: GoogleFonts.poppinsTextTheme(),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF1E3C72),
           primary: const Color(0xFF1E3C72),
           secondary: const Color(0xFF2A5298),
         ),
-        
-        // Tema Input Field
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.grey.shade50,

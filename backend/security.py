@@ -2,10 +2,11 @@ from datetime import datetime, timedelta
 from jose import jwt
 from passlib.context import CryptContext
 
+
 # Konfigurasi Keamanan (Di dunia nyata, SECRET_KEY tidak boleh disebar)
 SECRET_KEY = "kunci_rahasia_skripsi_sangat_aman_123"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480 # Token berlaku 8 Jam (1 shift kerja teknisi)
+ACCESS_TOKEN_EXPIRE_MINUTES = 480 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

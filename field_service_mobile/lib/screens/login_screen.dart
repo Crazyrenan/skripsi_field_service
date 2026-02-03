@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
-import 'dashboard_screen.dart'; // Pastikan file ini sudah dibuat sesuai panduan sebelumnya
+import 'package:provider/provider.dart'; // 1. Import Provider
+import '../providers/auth_provider.dart'; // 2. Import AuthProvider
+import 'dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,67 +11,52 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Controller untuk menangkap input teks
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   
-  // Service untuk komunikasi ke API
-  final ApiService _apiService = ApiService();
   
-  // State untuk Loading dan Password Visibility
-  bool _isLoading = false;
   bool _isPasswordVisible = false;
 
-  // Konfigurasi Warna
   final Color _primaryColor = const Color(0xFF1E3C72); 
   final Color _accentColor = const Color(0xFF2A5298);
 
-  // --- FUNGSI LOGIN UTAMA (SUDAH DIPERBAIKI) ---
   void _handleLogin() async {
-    // 1. Validasi Input Kosong
+    // 1. Validasi Input
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showCustomSnackBar('Email dan Password wajib diisi', isError: true);
       return;
     }
 
-    // 2. Tampilkan Loading
-    setState(() => _isLoading = true);
+    // 2. Panggil Provider (Logic ada di sini sekarang)
+    // listen: false karena kita cuma panggil fungsi, bukan pantau perubahan UI di dalam fungsi ini
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     
-    // 3. Panggil API Login (Tunggu sampai selesai)
-    final result = await _apiService.login(
+    // Kita tidak perlu setState loading manual, Provider yang urus!
+    final success = await auth.login(
       _emailController.text,
       _passwordController.text,
     );
 
-    // Cek apakah layar masih aktif sebelum update UI (Mencegah error async)
     if (!mounted) return;
 
-    // 4. Matikan Loading
-    setState(() => _isLoading = false);
-
-    // 5. Cek Hasil Login
-    if (result['success']) {
-      // A. JIKA SUKSES
-      _showCustomSnackBar(result['message'], isError: false);
+    // 3. Cek Hasil
+    if (success) {
+      // Ambil nama user dari provider untuk ditampilkan
+      final userName = auth.user?.fullName ?? "User";
+      _showCustomSnackBar("Selamat datang, $userName!", isError: false);
       
-      // Beri jeda 1 detik agar user membaca pesan sukses
-      await Future.delayed(const Duration(seconds: 1)); 
-
+      await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return;
       
-      // Pindah ke Dashboard & Hapus halaman Login dari stack (agar tidak bisa back)
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const DashboardScreen()),
       );
-      
     } else {
-      // B. JIKA GAGAL
-      _showCustomSnackBar(result['message'], isError: true);
+      _showCustomSnackBar("Login Gagal. Cek email/password.", isError: true);
     }
   }
 
-  // Helper untuk menampilkan SnackBar kustom
   void _showCustomSnackBar(String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -91,6 +77,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Pantau status loading dari Provider
+    // Setiap kali auth.isLoading berubah, halaman ini akan rebuild otomatis
+    final isLoading = context.watch<AuthProvider>().isLoading;
+    
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -100,7 +90,6 @@ class _LoginScreenState extends State<LoginScreen> {
           height: size.height,
           child: Stack(
             children: [
-              // 1. Header Background dengan Curve
               ClipPath(
                 clipper: HeaderClipper(),
                 child: Container(
@@ -114,26 +103,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-
-              // 2. Konten Utama
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Column(
                     children: [
                       SizedBox(height: size.height * 0.05),
-                      
-                      // Bagian Logo & Judul
                       _buildBrandHeader(),
-                      
                       const Spacer(flex: 2),
                       
-                      // Bagian Form Input
-                      _buildLoginForm(),
+                      // Kirim status isLoading ke widget form
+                      _buildLoginForm(isLoading), 
                       
                       const Spacer(flex: 3),
-                      
-                      // Footer
                       Text(
                         'Version 1.0.0 • Field Service Pro',
                         style: TextStyle(color: Colors.grey[400], fontSize: 12),
@@ -183,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildLoginForm(bool isLoading) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -215,7 +197,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 32),
 
-          // Input Email
           _buildTextField(
             controller: _emailController,
             label: 'Email Address',
@@ -225,7 +206,6 @@ class _LoginScreenState extends State<LoginScreen> {
           
           const SizedBox(height: 20),
           
-          // Input Password
           _buildTextField(
             controller: _passwordController,
             label: 'Password',
@@ -235,11 +215,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           const SizedBox(height: 32),
 
-          // Tombol Login
           SizedBox(
             height: 56,
             child: ElevatedButton(
-              onPressed: _isLoading ? null : _handleLogin,
+              // Disable tombol kalau sedang loading
+              onPressed: isLoading ? null : _handleLogin,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _primaryColor,
                 foregroundColor: Colors.white,
@@ -248,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: _isLoading
+              child: isLoading
                   ? const SizedBox(
                       height: 24, 
                       width: 24, 
@@ -310,7 +290,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// Clipper untuk membuat lengkungan di header
 class HeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {

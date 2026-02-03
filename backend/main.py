@@ -4,6 +4,7 @@ import models
 import hashlib
 import json
 import schemas
+from middleware import setup_middleware
 from fastapi.security import OAuth2PasswordRequestForm
 import security
 from database import engine, get_db
@@ -11,6 +12,8 @@ from database import engine, get_db
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Field Service API", version="1.0.0")
+
+setup_middleware(app)
 
 @app.get("/")
 def read_root():
@@ -114,20 +117,31 @@ def verify_ledger(db: Session = Depends(get_db)):
         return {"status": "danger", "message": "❌ BAHAYA: Data telah dimanipulasi orang dalam!", "errors": corrupted_blocks}
     
     
+# DI FILE: backend/main.py
+
+# Di backend/main.py
+
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # 1. Cari user berdasarkan email
+    # 1. Baris ini yang HILANG sebelumnya (Mendefinisikan variabel 'user')
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
     
-    # 2. Cek apakah user ada dan password benar (Bandingkan input vs Hash DB)
+    # 2. Cek password
+    # Sekarang 'user' sudah dikenali, jadi baris ini tidak akan error lagi
     if not user or not security.verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Email atau Password salah!")
 
-    # 3. Buat Token JWT
     access_token = security.create_access_token(data={"sub": user.email, "user_id": user.id})
     
+    # 4. Return data lengkap (Token + Info User)
     return {
         "access_token": access_token, 
         "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role_id": user.role_id
+        },
         "message": f"Selamat datang, {user.full_name}!"
     }
